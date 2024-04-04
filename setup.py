@@ -10,25 +10,28 @@
 #
 
 from setuptools import setup
-from torch.utils.cpp_extension import CUDAExtension, BuildExtension
+from setuptools.extension import Extension
+from setuptools.command.build_ext import build_ext
 import os
-os.path.dirname(os.path.abspath(__file__))
+
+class BuildCpuExtension(build_ext):
+    def build_extensions(self):
+        for ext in self.extensions:
+            ext.sources = [s for s in ext.sources if not s.endswith(('.cu', '.cuh'))]
+        super().build_extensions()
 
 setup(
     name="diff_gaussian_rasterization",
     packages=['diff_gaussian_rasterization'],
     ext_modules=[
-        CUDAExtension(
+        Extension(
             name="diff_gaussian_rasterization._C",
             sources=[
-            "cuda_rasterizer/rasterizer_impl.cu",
-            "cuda_rasterizer/forward.cu",
-            "cuda_rasterizer/backward.cu",
-            "rasterize_points.cu",
+            "rasterize_points.cpp",
             "ext.cpp"],
-            extra_compile_args={"nvcc": ["-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/glm/")]})
+            extra_compile_args={"cxx": ["-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/glm/")]})
         ],
     cmdclass={
-        'build_ext': BuildExtension
+        'build_ext': BuildCpuExtension
     }
 )
